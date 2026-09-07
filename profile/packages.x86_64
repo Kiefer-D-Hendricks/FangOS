@@ -8,7 +8,6 @@ bcachefs-tools
 bind
 bolt
 brltty
-broadcom-wl
 btrfs-progs
 clonezilla
 cloud-init
@@ -128,3 +127,25 @@ xdg-utils
 xfsprogs
 xl2tpd
 zsh
+
+# FangOS desktop
+plasma-meta
+konsole
+dolphin
+
+# Display Manager
+sddm
+
+# Networking
+networkmanager
+plasma-nm
+
+# Audio
+pipewire
+pipewire-alsa
+pipewire-pulse
+wireplumber
+
+# Useful Desktop Integration
+xdg-user-dirs
+xdg-utils
