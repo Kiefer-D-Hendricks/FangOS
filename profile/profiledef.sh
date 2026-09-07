@@ -3,7 +3,7 @@
 
 iso_name="fangos"
 iso_label="FANGOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
-iso_publisher="Kiefer D. Hendrics"
+iso_publisher="Kiefer D. Hendricks"
 iso_application="FangOS Live Environment"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="arch"
@@ -22,4 +22,7 @@ file_permissions=(
   ["/usr/local/bin/choose-mirror"]="0:0:755"
   ["/usr/local/bin/Installation_guide"]="0:0:755"
   ["/usr/local/bin/livecd-sound"]="0:0:755"
+  ["/home/fang"]="1000:1000:0755"
+  ["/home/fang/.config"]="1000:1000:0755"
+  ["/home/fang/.config/plasma-org.kde.plasma.desktop-appletsrc"]="1000:1000:0644"
 )
