@@ -1,0 +1,9 @@
+[General]
+ColorScheme=BreezeDark
+
+[Colors:Selection]
+BackgroundNormal=46,125,91
+BackgroundAlternate=46,125,91
+
+[WM]
+activeBackground=46,125,91
