@@ -139,6 +139,7 @@ sddm
 # Networking
 networkmanager
 plasma-nm
+firefox
 
 # Audio
 pipewire
@@ -149,3 +150,4 @@ wireplumber
 # Useful Desktop Integration
 xdg-user-dirs
 xdg-utils
+spice-vdagent

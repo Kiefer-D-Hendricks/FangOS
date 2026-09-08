@@ -1,0 +1,12 @@
+[Unit]
+Description=Populate FangOS live user defaults
+Before=display-manager.service
+ConditionPathExists=!/home/fang/.config/plasma-org.kde.plasma.desktop-appletsrc
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/cp -a /etc/skel/. /home/fang/
+ExecStart=/usr/bin/chown -R fang:fang /home/fang
+
+[Install]
+WantedBy=multi-user.target
