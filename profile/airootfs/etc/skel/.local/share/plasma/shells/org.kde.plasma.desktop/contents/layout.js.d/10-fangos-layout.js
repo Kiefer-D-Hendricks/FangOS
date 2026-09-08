@@ -17,7 +17,7 @@ panel.height = 36;
 panel.alignment = "center";
 panel.lengthMode = "fit";
 
-panel.addWidget("org.kde.plasma.kickoff");
+panel.addWidget("org.kde.plasma.kickerdash");
 panel.addWidget("org.kde.plasma.icontasks");
 panel.addWidget("org.kde.plasma.systemtray");
 var clock = panel.addWidget("org.kde.plasma.digitalclock");
