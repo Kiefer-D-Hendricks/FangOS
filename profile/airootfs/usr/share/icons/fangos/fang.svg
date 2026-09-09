@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>FangNet Launcher</title>
+
+  <!-- hood / head -->
+  <path d="M32 7
+           C23 7 14 11 9 18
+           C5 24 5 32 9 39
+           C13 46 20 51 27 53
+           L30 47
+           C24 45 18 41 15 36
+           C12 31 12 25 15 21
+           C19 16 25 13 32 13
+           C39 13 45 16 49 21
+           C52 25 52 31 49 36
+           C46 41 40 45 34 47
+           L37 53
+           C44 51 51 46 55 39
+           C59 32 59 24 55 18
+           C50 11 41 7 32 7Z"
+        fill="#2E7D5B"/>
+
+  <!-- brow -->
+  <path d="M14 24 L27 18 L32 24 L37 18 L50 24
+           L42 23 L36 29 L32 27 L28 29 L22 23 Z"
+        fill="#0B1712"/>
+
+  <!-- eyes -->
+  <path d="M16 25 C20 23 25 24 28 27
+           C24 31 19 31 16 25Z"
+        fill="#48A77D"/>
+  <path d="M48 25 C44 23 39 24 36 27
+           C40 31 45 31 48 25Z"
+        fill="#48A77D"/>
+
+  <!-- pupils -->
+  <path d="M22 24 L24 29 L21 29Z" fill="#0B1712"/>
+  <path d="M42 24 L40 29 L43 29Z" fill="#0B1712"/>
+
+  <!-- muzzle -->
+  <path d="M22 31
+           C25 29 29 29 32 31
+           C35 29 39 29 42 31
+           C40 35 36 37 32 37
+           C28 37 24 35 22 31Z"
+        fill="#48A77D"/>
+
+  <!-- mouth -->
+  <path d="M18 36
+           C23 39 27 40 32 40
+           C37 40 41 39 46 36
+           C44 45 39 50 32 54
+           C25 50 20 45 18 36Z"
+        fill="#0B1712"/>
+
+  <!-- fangs -->
+  <path d="M24 39 L29 40 L27 49 Z" fill="#F4F7F5"/>
+  <path d="M40 39 L35 40 L37 49 Z" fill="#F4F7F5"/>
+
+  <!-- tongue -->
+  <path d="M32 45
+           C30 49 30 54 29 58
+           L32 55
+           L35 58
+           C34 54 34 49 32 45Z"
+        fill="#48A77D"/>
+
+  <!-- subtle outer accent -->
+  <path d="M32 7
+           C23 7 14 11 9 18
+           C5 24 5 32 9 39
+           C13 46 20 51 27 53"
+        fill="none" stroke="#48A77D" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M32 7
+           C41 7 50 11 55 18
+           C59 24 59 32 55 39
+           C51 46 44 51 37 53"
+        fill="none" stroke="#48A77D" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

@@ -26,4 +26,5 @@ file_permissions=(
   ["/home/fang/.config"]="1000:1000:0755"
   ["/home/fang/.config/kdeglobals"]="1000:1000:0644"
   ["/home/fang/.config/plasma-org.kde.plasma.desktop-appletsrc"]="1000:1000:0644"
+  ["/home/fang/.config/plasma-welcomerc"]="1000:1000:0644"
 )

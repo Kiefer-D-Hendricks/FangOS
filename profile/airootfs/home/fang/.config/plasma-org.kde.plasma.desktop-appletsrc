@@ -153,7 +153,7 @@ DialogHeight=630
 DialogWidth=810
 
 [Containments][107][Applets][131][Configuration][General]
-customButtonImage=/usr/share/pixmaps/archlinux-logo.png
+customButtonImage=/usr/share/icons/fangos/fang.svg
 favoritesPortedToKAstats=true
 useCustomButtonImage=true
 
@@ -163,7 +163,7 @@ AppletOrder=131;109;110;111;129;130
 [Containments][77]
 ItemGeometries-1920x1080=
 ItemGeometriesHorizontal=
-activityId=e77972c4-4ed5-46b9-ac45-b880b684135f
+activityId=
 formfactor=0
 immutability=1
 lastScreen=0
@@ -177,7 +177,8 @@ DialogWidth=810
 
 [Containments][77][Wallpaper][org.kde.image][General]
 Image=file:///usr/share/backgrounds/fangos/fangos-default.png
-SlidePaths=/home/k13f7401d/.local/share/wallpapers/,/usr/share/wallpapers/
+PreviewImage=file:///usr/share/backgrounds/fangos/fangos-default.png
+SlidePaths=/usr/share/wallpapers/
 
 [ScreenMapping]
 itemsOnDisabledScreens=
