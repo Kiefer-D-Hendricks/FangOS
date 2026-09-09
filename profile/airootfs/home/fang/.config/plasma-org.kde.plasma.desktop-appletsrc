@@ -177,8 +177,6 @@ DialogWidth=810
 
 [Containments][77][Wallpaper][org.kde.image][General]
 Image=file:///usr/share/backgrounds/fangos/fangos-default.png
-PreviewImage=file:///usr/share/backgrounds/fangos/fangos-default.png
-SlidePaths=/usr/share/wallpapers/
 
 [ScreenMapping]
 itemsOnDisabledScreens=
