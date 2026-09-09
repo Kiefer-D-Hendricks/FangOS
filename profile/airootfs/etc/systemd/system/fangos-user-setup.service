@@ -1,7 +1,6 @@
 [Unit]
 Description=Populate FangOS live user defaults
 Before=display-manager.service
-ConditionPathExists=!/home/fang/.config/plasma-org.kde.plasma.desktop-appletsrc
 
 [Service]
 Type=oneshot
