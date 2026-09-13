@@ -1,0 +1,18 @@
+background_image = Image("background.png");
+
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+image_width = background_image.GetWidth();
+image_height = background_image.GetHeight();
+
+scale_x = screen_width / image_width;
+scale_y = screen_height / image_height;
+
+scaled = background_image.Scale(image_width * scale_x,
+                                image_height * scale_y);
+
+sprite = Sprite(scaled);
+sprite.SetX(0);
+sprite.SetY(0);
+sprite.SetZ(-100);

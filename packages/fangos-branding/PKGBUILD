@@ -1,0 +1,40 @@
+pkgname=fangos-branding
+pkgver=1.0
+pkgrel=2
+pkgdesc="FangOS desktop branding"
+arch=('any')
+license=('custom')
+depends=('breeze')
+install=fangos-branding.install
+
+source=(
+    'fangos-default.png'
+    'fangos-apply-wallpaper'
+    '99-fangos-wallpaper.hook'
+    'fangos.plymouth'
+    'fangos.script'
+    'fangos-splash.png'
+)
+
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+package() {
+    install -Dm644 "$srcdir/fangos-default.png" \
+        "$pkgdir/usr/share/fangos/fangos-default.png"
+
+    install -Dm755 "$srcdir/fangos-apply-wallpaper" \
+        "$pkgdir/usr/bin/fangos-apply-wallpaper"
+
+    install -Dm644 "$srcdir/99-fangos-wallpaper.hook" \
+        "$pkgdir/usr/share/libalpm/hooks/99-fangos-wallpaper.hook"
+
+    install -Dm644 "$srcdir/fangos.plymouth" \
+        "$pkgdir/usr/share/plymouth/themes/fangos/fangos.plymouth"
+
+    install -Dm644 "$srcdir/fangos.script" \
+        "$pkgdir/usr/share/plymouth/themes/fangos/fangos.script"
+
+    install -Dm644 "$srcdir/fangos-splash.png" \
+      "$pkgdir/usr/share/plymouth/themes/fangos/background.png"
+
+}

@@ -1,0 +1,24 @@
+# FangOS GRUB Theme
+
+desktop-image: "background.png"
+desktop-color: "#07100C"
+
+title-text: ""
+
+message-color: "#72E6B0"
+message-bg-color: "#07100C"
+
++ boot_menu {
+    left = 27%
+    top = 48%
+    width = 46%
+    height = 28%
+
+    item_font = "Unifont Regular 16"
+    item_color = "#B7C8C0"
+    selected_item_color = "#72E6B0"
+
+    item_height = 34
+    item_padding = 8
+    item_spacing = 5
+}

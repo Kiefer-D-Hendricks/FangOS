@@ -1,0 +1,11 @@
+[SddmGreeterTheme]
+Name=FangOS
+Description=FangOS Login Theme
+Author=Kiefer D. Hendricks
+License=GPL-3.0-or-later
+Type=sddm-theme
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=fangos
+Theme-API=2.0

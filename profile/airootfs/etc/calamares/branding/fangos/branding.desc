@@ -14,12 +14,12 @@ strings:
     knownIssuesUrl: ""
     releaseNotesUrl: ""
 
+slideshow: "show.qml"
 images:
     productLogo: fangos.png
     productIcon: fangos.png
     productWelcome: fangos.png
 
-slideshow: ""
 
 style:
     sidebarBackground: "#0B1712"

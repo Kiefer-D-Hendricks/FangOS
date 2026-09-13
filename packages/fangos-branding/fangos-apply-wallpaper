@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+SOURCE="/usr/share/fangos/fangos-default.png"
+NEXT="/usr/share/wallpapers/Next/contents"
+
+[[ -f "$SOURCE" ]] || exit 0
+
+for dir in "$NEXT/images" "$NEXT/images_dark"; do
+    [[ -d "$dir" ]] || continue
+
+    find "$dir" -maxdepth 1 -type f \
+        \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) \
+        -exec cp -f "$SOURCE" {} \;
+done

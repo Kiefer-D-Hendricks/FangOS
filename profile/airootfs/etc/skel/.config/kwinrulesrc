@@ -1,0 +1,16 @@
+[1]
+Description=FangOS Glass
+clientmachine=localhost
+clientmachinematch=0
+opacityactive=92
+opacityactiverule=2
+opacityinactive=88
+opacityinactiverule=2
+types=1
+wmclass=.*
+wmclasscomplete=false
+wmclassmatch=3
+
+[General]
+count=1
+rules=1

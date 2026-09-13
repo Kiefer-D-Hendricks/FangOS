@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = breeze
+
+[Action]
+Description = Restoring FangOS Plasma wallpaper...
+When = PostTransaction
+Exec = /usr/bin/fangos-apply-wallpaper

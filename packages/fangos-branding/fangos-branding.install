@@ -1,0 +1,7 @@
+post_install() {
+    /usr/bin/fangos-apply-wallpaper || true
+}
+
+post_upgrade() {
+    /usr/bin/fangos-apply-wallpaper || true
+}
