@@ -27,4 +27,6 @@ file_permissions=(
   ["/home/fang/.config/kdeglobals"]="1000:1000:0644"
   ["/home/fang/.config/plasma-org.kde.plasma.desktop-appletsrc"]="1000:1000:0644"
   ["/home/fang/.config/plasma-welcomerc"]="1000:1000:0644"
+  ["/home/fang/Desktop"]="1000:1000:0755"
+  ["/home/fang/Desktop/install-fangos.desktop"]="1000:1000:0755"
 )

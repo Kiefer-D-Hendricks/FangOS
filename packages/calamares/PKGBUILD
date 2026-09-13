@@ -1,0 +1,49 @@
+pkgname=calamares-fangos
+pkgver=3.4.0
+pkgrel=1
+pkgdesc="Calamares system installer for FangOS"
+arch=('x86_64')
+url="https://calamares.io/"
+license=('GPL-3.0-or-later')
+
+depends=(
+    'yaml-cpp'
+    'qt6-base'
+    'qt6-svg'
+    'qt6-declarative'
+    'kconfig'
+    'kcoreaddons'
+    'ki18n'
+    'kservice'
+    'kwidgetsaddons'
+    'solid'
+    'libplasma'
+)
+
+makedepends=(
+    'cmake'
+    'ninja'
+    'extra-cmake-modules'
+    'git'
+)
+
+source=('calamares-src.tar.gz')
+sha256sums=('SKIP')
+
+build() {
+    cmake -S "$srcdir/src" \
+          -B "$srcdir/build" \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          -DINSTALL_CONFIG=ON
+
+    cmake --build "$srcdir/build"
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install "$srcdir/build"
+
+    install -Dm644 "$srcdir/src/settings.conf" \
+        "$pkgdir/usr/share/calamares/settings.conf"
+}

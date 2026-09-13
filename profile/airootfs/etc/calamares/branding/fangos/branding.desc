@@ -1,0 +1,29 @@
+---
+componentName: fangos
+
+strings:
+    productName: FangOS
+    shortProductName: FangOS
+    version: Rolling
+    shortVersion: Rolling
+    versionedName: FangOS Rolling
+    shortVersionedName: FangOS
+    bootloaderEntryName: FangOS
+    productUrl: ""
+    supportUrl: ""
+    knownIssuesUrl: ""
+    releaseNotesUrl: ""
+
+images:
+    productLogo: fangos.png
+    productIcon: fangos.png
+    productWelcome: fangos.png
+
+slideshow: ""
+
+style:
+    sidebarBackground: "#0B1712"
+    sidebarText: "#FFFFFF"
+    sidebarTextSelect: "#FFFFFF"
+
+windowPlacement: center
