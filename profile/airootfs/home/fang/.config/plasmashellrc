@@ -2,7 +2,7 @@
 floating=1
 panelLengthMode=1
 panelOpacity=2
-panelVisibility=0
+panelVisibility=1
 shell=org.kde.plasma.desktop
 
 [PlasmaViews][Panel 107][Defaults]
