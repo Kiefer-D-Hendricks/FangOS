@@ -17,3 +17,12 @@ packages/*/*.pkg.tar.zst
 /lib
 /lib64
 /fangos-test.qcow2
+/dev
+/new_root
+/proc
+/run
+/sbin
+/sys
+/sysroot
+/tmp
+/usr
