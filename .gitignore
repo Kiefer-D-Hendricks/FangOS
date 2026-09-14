@@ -1,4 +1,6 @@
 work/
 out/
-work/
-out/
+packages/*/src/
+packages/*/pkg/
+packages/*/*.log
+packages/*/*.pkg.tar.zst
