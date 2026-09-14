@@ -4,3 +4,16 @@ packages/*/src/
 packages/*/pkg/
 packages/*/*.log
 packages/*/*.pkg.tar.zst
+/VERSION
+/bin
+/buildconfig
+/config
+/early_cpio
+/etc
+/hooks
+/init
+/init_functions
+/kernel
+/lib
+/lib64
+/fangos-test.qcow2

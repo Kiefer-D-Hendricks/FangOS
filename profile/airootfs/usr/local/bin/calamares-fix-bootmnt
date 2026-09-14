@@ -1,0 +1,21 @@
+#!/bin/bash
+# Restores /run/archiso/bootmnt when a copytoram=y boot removed it.
+# Runs on the live system (dontChroot) before unpackfs. Harmless no-op on normal boots.
+set -u
+TARGET="/run/archiso/bootmnt/arch/x86_64/airootfs.sfs"
+[ -f "$TARGET" ] && exit 0
+mkdir -p /run/archiso/bootmnt
+if ! mountpoint -q /run/archiso/bootmnt 2>/dev/null; then
+    uuid=$(grep -o "archisosearchuuid=[^ ]*" /proc/cmdline 2>/dev/null | cut -d= -f2 || true)
+    if [ -n "$uuid" ]; then
+        mount -U "$uuid" /run/archiso/bootmnt 2>/dev/null || \
+        mount "/dev/disk/by-uuid/$uuid" /run/archiso/bootmnt 2>/dev/null || true
+    fi
+fi
+[ -f "$TARGET" ] && exit 0
+# Last resort: squashfs was copied to RAM; link it into the expected layout.
+if [ -f /run/archiso/copytoram/airootfs.sfs ]; then
+    mkdir -p /run/archiso/bootmnt/arch/x86_64
+    ln -sf /run/archiso/copytoram/airootfs.sfs "$TARGET"
+fi
+exit 0
