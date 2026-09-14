@@ -26,3 +26,5 @@ packages/*/*.pkg.tar.zst
 /sysroot
 /tmp
 /usr
+/var
+packages/calamares/*.tar.gz
