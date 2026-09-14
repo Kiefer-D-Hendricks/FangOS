@@ -9,10 +9,10 @@ strings:
     versionedName: FangOS Rolling
     shortVersionedName: FangOS
     bootloaderEntryName: FangOS
-    productUrl: ""
-    supportUrl: ""
-    knownIssuesUrl: ""
-    releaseNotesUrl: ""
+    productUrl: "https://github.com/Kiefer-D-Hendricks/FangOS"
+    supportUrl: "https://github.com/Kiefer-D-Hendricks/FangOS/issues"
+    knownIssuesUrl: "https://github.com/Kiefer-D-Hendricks/FangOS/issues"
+    releaseNotesUrl: "https://github.com/Kiefer-D-Hendricks/FangOS/releases"
 
 slideshow: "show.qml"
 images:
