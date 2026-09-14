@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = systemd
+
+[Action]
+Description = Installing FangOS-compatible systemd-boot
+When = PostTransaction
+Exec = /usr/bin/cp -f /usr/share/fangos/systemd-bootx64-261.2.efi /usr/lib/systemd/boot/efi/systemd-bootx64.efi

@@ -28,3 +28,4 @@ packages/*/*.pkg.tar.zst
 /usr
 /var
 packages/calamares/*.tar.gz
+build-*.log

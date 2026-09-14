@@ -1,21 +1,44 @@
 #!/bin/bash
-# Restores /run/archiso/bootmnt when a copytoram=y boot removed it.
+# Restores /run/archiso/bootmnt if a copytoram boot removed it.
 # Runs on the live system (dontChroot) before unpackfs. Harmless no-op on normal boots.
+# NOTE: all ISO boot entries now pass copytoram=n, so this is purely a safety net
+# for users who manually add copytoram=y at the boot menu.
 set -u
 TARGET="/run/archiso/bootmnt/arch/x86_64/airootfs.sfs"
-[ -f "$TARGET" ] && exit 0
+LOG="/tmp/calamares-fix-bootmnt.log"
+log() { echo "[$(date +%T)] $*" | tee -a "$LOG"; }
+
+if [ -f "$TARGET" ]; then
+    log "OK: $TARGET present, nothing to do."
+    exit 0
+fi
+log "WARN: $TARGET missing, attempting restore..."
 mkdir -p /run/archiso/bootmnt
 if ! mountpoint -q /run/archiso/bootmnt 2>/dev/null; then
     uuid=$(grep -o "archisosearchuuid=[^ ]*" /proc/cmdline 2>/dev/null | cut -d= -f2 || true)
     if [ -n "$uuid" ]; then
-        mount -U "$uuid" /run/archiso/bootmnt 2>/dev/null || \
-        mount "/dev/disk/by-uuid/$uuid" /run/archiso/bootmnt 2>/dev/null || true
+        log "Trying mount by UUID $uuid ..."
+        mount -U "$uuid" /run/archiso/bootmnt 2>>"$LOG" || \
+        mount "/dev/disk/by-uuid/$uuid" /run/archiso/bootmnt 2>>"$LOG" || \
+        log "WARN: UUID mount failed."
+    else
+        log "WARN: no archisosearchuuid on kernel cmdline."
     fi
 fi
-[ -f "$TARGET" ] && exit 0
-# Last resort: squashfs was copied to RAM; link it into the expected layout.
+if [ -f "$TARGET" ]; then
+    log "OK: restored via device mount."
+    exit 0
+fi
+# Last resort: copytoram copied the image to RAM; link it into the expected layout.
 if [ -f /run/archiso/copytoram/airootfs.sfs ]; then
+    log "Linking /run/archiso/copytoram/airootfs.sfs into place..."
     mkdir -p /run/archiso/bootmnt/arch/x86_64
     ln -sf /run/archiso/copytoram/airootfs.sfs "$TARGET"
 fi
-exit 0
+if [ -f "$TARGET" ]; then
+    log "OK: restored via copytoram link."
+    exit 0
+fi
+log "ERROR: could not restore $TARGET. The install media may be unreadable;"
+log "ERROR: try re-writing the USB stick."
+exit 1
