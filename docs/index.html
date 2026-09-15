@@ -363,13 +363,22 @@
           <article class="step-panel active" id="panel-download" role="tabpanel">
             <h3>Download and verify</h3>
             <p>Download the FangOS ISO and its SHA-256 checksum from the official release. Compare the checksum before writing the image.</p>
+            <p><strong>On Linux:</strong></p>
             <div class="code-block"><code>sha256sum fangos-*.iso</code><button class="copy-btn" data-copy="sha256sum fangos-*.iso">Copy</button></div>
+            <p><strong>On Windows</strong> (PowerShell):</p>
+            <div class="code-block"><code>Get-FileHash .\fangos-*.iso -Algorithm SHA256</code><button class="copy-btn" data-copy="Get-FileHash .\fangos-*.iso -Algorithm SHA256">Copy</button></div>
             <p class="release-note">The public release link and checksum will be added when hosting is connected.</p>
           </article>
           <article class="step-panel" id="panel-write" role="tabpanel">
             <h3>Write it as a raw image</h3>
-            <p>On Linux, identify the USB device, unmount its partitions, and write the ISO directly. Replace <code>/dev/sdX</code> with the whole USB device—not a numbered partition.</p>
+            <p><strong>On Linux</strong> — identify the USB device, unmount its partitions, and write the ISO directly. Replace <code>/dev/sdX</code> with the whole USB device—not a numbered partition.</p>
             <div class="code-block"><code>sudo dd if=fangos-*.iso of=/dev/sdX bs=4M status=progress oflag=sync</code><button class="copy-btn" data-copy="sudo dd if=fangos-*.iso of=/dev/sdX bs=4M status=progress oflag=sync">Copy</button></div>
+            <p><strong>On Windows</strong> — use <a href="https://rufus.ie">Rufus</a> (free, no install needed):</p>
+            <ul>
+              <li>Open Rufus and select your USB drive under <em>Device</em>.</li>
+              <li>Click <em>SELECT</em> and choose the FangOS ISO.</li>
+              <li>Click <em>START</em> — if Rufus asks, choose <strong>DD Image mode</strong>.</li>
+            </ul>
             <div class="warning"><strong>Check the target twice.</strong> Writing to the wrong device will destroy its data.</div>
           </article>
           <article class="step-panel" id="panel-install" role="tabpanel">
