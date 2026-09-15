@@ -305,10 +305,10 @@
           <h1>Arch power.<br>Personal vision.</h1>
           <p class="lede">FangOS is an independent Linux system built on Arch, shaped around KDE Plasma, and packaged with a guided Calamares installer. Fast, direct, and unmistakably its own.</p>
           <div class="actions">
-            <span class="button disabled" aria-disabled="true">ISO download coming soon</span>
+            <a class="button" href="https://archive.org/download/fangos-2026.09.14-x86_64/fangos-2026.09.14-x86_64.iso">Download FangOS ISO</a>
             <a class="button secondary" href="https://github.com/Kiefer-D-Hendricks/FangOS.git">Browse the source ↗</a>
           </div>
-          <p class="release-note">The final ISO is ready; the public download host is the last step.</p>
+          <p class="release-note">FangOS 2026.09.14 · ≈ 2.8 GiB ISO · <a href="https://archive.org/details/fangos-2026.09.14-x86_64">release page</a></p>
         </div>
         <div class="hero-visual">
           <figure class="photo-frame">
@@ -362,17 +362,18 @@
         <div>
           <article class="step-panel active" id="panel-download" role="tabpanel">
             <h3>Download and verify</h3>
-            <p>Download the FangOS ISO and its SHA-256 checksum from the official release. Compare the checksum before writing the image.</p>
+            <p>Download the FangOS ISO from the <a href="https://archive.org/details/fangos-2026.09.14-x86_64">official release on the Internet Archive</a>, then compare its SHA-256 checksum before writing the image.</p>
             <p><strong>On Linux:</strong></p>
-            <div class="code-block"><code>sha256sum fangos-*.iso</code><button class="copy-btn" data-copy="sha256sum fangos-*.iso">Copy</button></div>
+            <div class="code-block"><code>sha256sum fangos-2026.09.14-x86_64.iso</code><button class="copy-btn" data-copy="sha256sum fangos-2026.09.14-x86_64.iso">Copy</button></div>
             <p><strong>On Windows</strong> (PowerShell):</p>
-            <div class="code-block"><code>Get-FileHash .\fangos-*.iso -Algorithm SHA256</code><button class="copy-btn" data-copy="Get-FileHash .\fangos-*.iso -Algorithm SHA256">Copy</button></div>
-            <p class="release-note">The public release link and checksum will be added when hosting is connected.</p>
+            <div class="code-block"><code>Get-FileHash .\fangos-2026.09.14-x86_64.iso -Algorithm SHA256</code><button class="copy-btn" data-copy="Get-FileHash .\fangos-2026.09.14-x86_64.iso -Algorithm SHA256">Copy</button></div>
+            <p>The output must match this checksum exactly:</p>
+            <div class="code-block"><code>04cf0a7e4c2a3540086966b3078813c30568c42e6ef01fb6384f314a046ab137</code><button class="copy-btn" data-copy="04cf0a7e4c2a3540086966b3078813c30568c42e6ef01fb6384f314a046ab137">Copy</button></div>
           </article>
           <article class="step-panel" id="panel-write" role="tabpanel">
             <h3>Write it as a raw image</h3>
             <p><strong>On Linux</strong> — identify the USB device, unmount its partitions, and write the ISO directly. Replace <code>/dev/sdX</code> with the whole USB device—not a numbered partition.</p>
-            <div class="code-block"><code>sudo dd if=fangos-*.iso of=/dev/sdX bs=4M status=progress oflag=sync</code><button class="copy-btn" data-copy="sudo dd if=fangos-*.iso of=/dev/sdX bs=4M status=progress oflag=sync">Copy</button></div>
+            <div class="code-block"><code>sudo dd if=fangos-2026.09.14-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync</code><button class="copy-btn" data-copy="sudo dd if=fangos-2026.09.14-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync">Copy</button></div>
             <p><strong>On Windows</strong> — use <a href="https://rufus.ie">Rufus</a> (free, no install needed):</p>
             <ul>
               <li>Open Rufus and select your USB drive under <em>Device</em>.</li>
