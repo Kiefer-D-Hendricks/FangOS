@@ -1,0 +1,15 @@
+pkgname=fang
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Friendly pacman frontend for FangOS"
+arch=("any")
+url="https://os.fangnet.me"
+license=("GPL-3.0-or-later")
+depends=("python" "pacman")
+
+source=("fang")
+sha256sums=("SKIP")
+
+package() {
+    install -Dm755 "$srcdir/fang" "$pkgdir/usr/bin/fang"
+}

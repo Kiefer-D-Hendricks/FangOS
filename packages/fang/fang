@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""
+fang - the FangOS package tool.
+
+A friendly frontend for pacman. FangOS-flavored syntax and output,
+pacman doing the heavy lifting underneath.
+"""
+
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+VERSION = "0.2.0"
+
+# Terminal accents (Kiefer Green-ish)
+GREEN = "\033[32m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
+COMMANDS_NEEDING_ROOT = {"install", "remove", "update"}
+
+
+def ensure_root(argv):
+    """Re-run ourselves under sudo when a privileged command needs it."""
+    if os.geteuid() != 0:
+        sudo = shutil.which("sudo")
+        if not sudo:
+            sys.exit("fang: this command needs root, and sudo isn't available.")
+        os.execvp(sudo, [sudo, sys.executable or "python3",
+                         os.path.abspath(__file__)] + argv)
+
+
+def find_pacman():
+    pacman = shutil.which("pacman")
+    if not pacman:
+        sys.exit("fang: couldn't find pacman - fang needs an Arch-based system.")
+    return pacman
+
+
+# Fang teeth progress bar: pacman's [#---] bars become [▼▼▼···]
+TOOTH = "▼"
+GAP = "·"
+_BAR_RE = re.compile(r"\[([#-]+)\](?=\s*\d+%)")
+
+
+def teethify(line):
+    """Turn pacman-style [#---] progress bars into rows of fang teeth."""
+    def _sub(match):
+        bar = match.group(1)
+        teeth = "".join(TOOTH if c == "#" else GAP for c in bar)
+        return "[" + teeth + "]"
+    return _BAR_RE.sub(_sub, line)
+
+
+def _stream_with_teeth(pipe):
+    """Pass pacman's output through, rewriting progress bars as teeth."""
+    out = sys.stdout
+    buf = ""
+    while True:
+        chunk = pipe.read(1024)
+        if not chunk:
+            break
+        buf += chunk.decode("utf-8", errors="replace")
+        parts = re.split(r"(\r\n|\r|\n)", buf)
+        buf = parts.pop()  # incomplete trailing segment
+        for i in range(0, len(parts) - 1, 2):
+            out.write(teethify(parts[i]) + parts[i + 1])
+        out.flush()
+    if buf:
+        out.write(teethify(buf))
+        out.flush()
+
+
+def run_pacman(pacman_args, success_msg=None):
+    proc = subprocess.Popen([find_pacman()] + pacman_args,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    try:
+        _stream_with_teeth(proc.stdout)
+    except KeyboardInterrupt:
+        proc.terminate()
+        proc.wait()
+        sys.exit(130)
+    returncode = proc.wait()
+    if returncode == 0 and success_msg:
+        print(f"{GREEN}{BOLD}{success_msg}{RESET}")
+    sys.exit(returncode)
+
+
+def build_parser():
+    p = argparse.ArgumentParser(
+        prog="fang",
+        description="The FangOS package tool - a friendly frontend for pacman.",
+    )
+    p.add_argument("--version", action="version",
+                   version="%(prog)s " + VERSION + " (FangOS package tool)")
+    sub = p.add_subparsers(dest="command", metavar="<command>")
+
+    sp = sub.add_parser("install", help="install packages")
+    sp.add_argument("packages", nargs="*", metavar="package",
+                    help="packages to install")
+
+    sp = sub.add_parser("remove", help="remove packages")
+    sp.add_argument("packages", nargs="*", metavar="package",
+                    help="packages to remove")
+
+    sub.add_parser("update", help="update the whole system")
+
+    sp = sub.add_parser("search", help="search for packages")
+    sp.add_argument("term", nargs="?", metavar="term",
+                    help="search term")
+
+    sp = sub.add_parser("info", help="show package details")
+    sp.add_argument("package", nargs="?", metavar="package",
+                    help="package to inspect")
+
+    sp = sub.add_parser("list", help="list installed packages")
+    sp.add_argument("pattern", nargs="?", metavar="pattern",
+                    help="optional filter")
+
+    return p
+
+
+def main(argv=None):
+    parser = build_parser()
+    args, extra = parser.parse_known_args(argv)
+
+    if not args.command:
+        parser.print_help()
+        return 2
+
+    if args.command in COMMANDS_NEEDING_ROOT:
+        ensure_root(sys.argv[1:] if argv is None else argv)
+
+    if args.command == "install":
+        if not args.packages:
+            sys.exit("fang: tell me what to install - fang install <package> ...")
+        run_pacman(["-S"] + extra + args.packages,
+                   success_msg="Installed. Enjoy!")
+
+    elif args.command == "remove":
+        if not args.packages:
+            sys.exit("fang: tell me what to remove - fang remove <package> ...")
+        run_pacman(["-Rs"] + extra + args.packages,
+                   success_msg="Removed. Gone like it was never there.")
+
+    elif args.command == "update":
+        run_pacman(["-Syu"] + extra,
+                   success_msg="System is up to date. Shiny!")
+
+    elif args.command == "search":
+        if not args.term:
+            sys.exit("fang: tell me what to search for - fang search <term>")
+        run_pacman(["-Ss"] + extra + [args.term])
+
+    elif args.command == "info":
+        if not args.package:
+            sys.exit("fang: tell me what to look up - fang info <package>")
+        run_pacman(["-Si", args.package] + extra)
+
+    elif args.command == "list":
+        query = ["-Q"] + extra
+        if args.pattern:
+            query.append(args.pattern)
+        run_pacman(query)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
