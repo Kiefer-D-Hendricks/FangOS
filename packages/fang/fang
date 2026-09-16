@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 
 # Terminal accents (Kiefer Green-ish)
 GREEN = "\033[32m"
@@ -148,17 +148,17 @@ def main(argv=None):
     if args.command == "install":
         if not args.packages:
             sys.exit("fang: tell me what to install - fang install <package> ...")
-        run_pacman(["-S"] + extra + args.packages,
+        run_pacman(["-S", "--noconfirm"] + extra + args.packages,
                    success_msg="Installed. Enjoy!")
 
     elif args.command == "remove":
         if not args.packages:
             sys.exit("fang: tell me what to remove - fang remove <package> ...")
-        run_pacman(["-Rs"] + extra + args.packages,
+        run_pacman(["-Rs", "--noconfirm"] + extra + args.packages,
                    success_msg="Removed. Gone like it was never there.")
 
     elif args.command == "update":
-        run_pacman(["-Syu"] + extra,
+        run_pacman(["-Syu", "--noconfirm"] + extra,
                    success_msg="System is up to date. Shiny!")
 
     elif args.command == "search":
