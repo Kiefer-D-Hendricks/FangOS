@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 
 # Terminal accents (Kiefer Green-ish)
 GREEN = "\033[32m"
@@ -56,9 +56,15 @@ def teethify(line):
 
 
 def _stream_with_teeth(pipe):
-    """Pass pacman's output through, rewriting progress bars as teeth."""
+    """Pass pacman's output through, rewriting progress bars as teeth.
+
+    The incomplete trailing segment is flushed as it arrives (without
+    duplicating it) so interactive prompts like pacman's
+    "Proceed with installation? [Y/n]" stay visible instead of looking hung.
+    """
     out = sys.stdout
     buf = ""
+    shown = 0  # how much of the trailing segment is already displayed
     while True:
         chunk = pipe.read(1024)
         if not chunk:
@@ -66,11 +72,16 @@ def _stream_with_teeth(pipe):
         buf += chunk.decode("utf-8", errors="replace")
         parts = re.split(r"(\r\n|\r|\n)", buf)
         buf = parts.pop()  # incomplete trailing segment
-        for i in range(0, len(parts) - 1, 2):
-            out.write(teethify(parts[i]) + parts[i + 1])
+        if len(parts) > 1:
+            for i in range(0, len(parts) - 1, 2):
+                out.write(teethify(parts[i]) + parts[i + 1])
+            shown = 0  # trailing segment is brand new now
+        if len(buf) > shown:
+            out.write(teethify(buf[shown:]))
+            shown = len(buf)
         out.flush()
-    if buf:
-        out.write(teethify(buf))
+    if len(buf) > shown:
+        out.write(teethify(buf[shown:]))
         out.flush()
 
 
