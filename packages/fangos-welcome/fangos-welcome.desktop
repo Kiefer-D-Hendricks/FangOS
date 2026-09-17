@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=FangOS Welcome
+Comment=First-boot welcome and tour for FangOS
+Exec=/usr/bin/fangos-welcome
+Terminal=false
+Categories=System;
+X-GNOME-Autostart-enabled=true

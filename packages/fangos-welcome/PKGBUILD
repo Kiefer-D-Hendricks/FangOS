@@ -1,0 +1,18 @@
+# Maintainer: Kiefer D. Hendricks
+pkgname=fangos-welcome
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="First-boot welcome app for FangOS"
+arch=('any')
+url="https://github.com/Kiefer-D-Hendricks/FangOS"
+license=('MIT')
+depends=('python' 'python-pyqt6')
+source=('fangos-welcome'
+        'fangos-welcome.desktop')
+sha256sums=('SKIP'
+            'SKIP')
+
+package() {
+    install -Dm755 "$srcdir/fangos-welcome" "$pkgdir/usr/bin/fangos-welcome"
+    install -Dm644 "$srcdir/fangos-welcome.desktop" "$pkgdir/etc/xdg/autostart/fangos-welcome.desktop"
+}

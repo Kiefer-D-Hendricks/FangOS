@@ -1,5 +1,5 @@
 pkgname=fang
-pkgver=0.2.4
+pkgver=0.3.0
 pkgrel=1
 pkgdesc="Friendly pacman frontend for FangOS"
 arch=("any")
@@ -7,9 +7,11 @@ url="https://os.fangnet.me"
 license=("GPL-3.0-or-later")
 depends=("python" "pacman")
 
-source=("fang")
-sha256sums=("SKIP")
+source=("fang" "fang-completion.bash")
+sha256sums=("SKIP" "SKIP")
 
 package() {
     install -Dm755 "$srcdir/fang" "$pkgdir/usr/bin/fang"
+    install -Dm644 "$srcdir/fang-completion.bash" \
+        "$pkgdir/usr/share/bash-completion/completions/fang"
 }

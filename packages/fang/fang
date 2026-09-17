@@ -14,17 +14,22 @@ import re
 import shutil
 import signal
 import struct
+import subprocess
 import sys
 import termios
 
-VERSION = "0.2.4"
+VERSION = "0.3.0"
 
 # Terminal accents (Kiefer Green-ish)
 GREEN = "\033[32m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-COMMANDS_NEEDING_ROOT = {"install", "remove", "update"}
+COMMANDS_NEEDING_ROOT = {"install", "remove", "update", "clean"}
+
+# Hidden flag: re-exec marker so `fang orphans` skips its confirmation
+# prompt after sudo re-runs it (the user already said yes).
+_ORPHANS_CONFIRMED = "--fang-orphans-confirmed"
 
 
 def ensure_root(argv):
@@ -114,12 +119,16 @@ def _stream_with_teeth(fd):
     if buf and not buf.endswith("\n"):
         out.write("\n")  # finish a mid-bar line before our own output
     out.flush()
-def run_pacman(pacman_args, success_msg=None):
+
+
+def _run_pacman(pacman_args, success_msg=None):
     """Run pacman under a pty so it believes it's on a real terminal.
 
     That keeps pacman's progress bars enabled and defeats stdio block
     buffering, so fang streams live output with teeth instead of sitting
     silent until pacman exits.
+
+    Returns pacman's exit code (unlike run_pacman, does not exit).
     """
     pacman = find_pacman()
     try:
@@ -156,7 +165,137 @@ def run_pacman(pacman_args, success_msg=None):
     returncode = os.waitstatus_to_exitcode(status)
     if returncode == 0 and success_msg:
         print(f"{GREEN}{BOLD}{success_msg}{RESET}")
-    sys.exit(returncode)
+    return returncode
+
+
+def run_pacman(pacman_args, success_msg=None):
+    """Run pacman with teeth, then exit with its exit code."""
+    sys.exit(_run_pacman(pacman_args, success_msg=success_msg))
+
+
+def _dir_size(path):
+    """Size of a directory in bytes (0 when unreadable or missing)."""
+    try:
+        proc = subprocess.run(["du", "-sb", path],
+                              capture_output=True, text=True)
+        return int(proc.stdout.split()[0])
+    except (OSError, ValueError, IndexError):
+        return 0
+
+
+def _human_size(num):
+    """1_234_567 -> '1.2M'. Keeps it to one decimal, no trailing fuss."""
+    size = float(num)
+    for unit in ("B", "K", "M", "G", "T"):
+        if size < 1024 or unit == "T":
+            return f"{int(size)}{unit}" if unit == "B" else f"{size:.1f}{unit}"
+        size /= 1024
+    return f"{size:.1f}T"  # unreachable, keeps linters calm
+
+
+def _get_orphans():
+    """Names of orphaned packages (pacman -Qtdq). Empty list when none.
+
+    pacman exits 1 when the query matches nothing, so the return code
+    alone can't tell "no orphans" from an error - go by the output.
+    """
+    pacman = find_pacman()
+    proc = subprocess.run([pacman, "-Qtdq"],
+                          capture_output=True, text=True)
+    return [line.strip() for line in proc.stdout.splitlines()
+            if line.strip()]
+
+
+def _prompt_yes_no(prompt):
+    """Explicit yes/no prompt. Defaults to no; Ctrl-C/EOF counts as no."""
+    if not sys.stdin.isatty():
+        return False
+    try:
+        answer = input(prompt).strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer in ("y", "yes")
+
+
+_WHY_FIELDS = ("Name", "Version", "Install Reason",
+               "Required By", "Optional For", "Conflicts With")
+
+
+def _cmd_why(package):
+    """Explain why a package is installed, from `pacman -Qi`."""
+    pacman = find_pacman()
+    proc = subprocess.run([pacman, "-Qi", package],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        sys.exit(f"fang: {package} isn't installed.")
+    info = {}
+    for line in proc.stdout.splitlines():
+        if " : " in line:
+            key, value = line.split(" : ", 1)
+            key = key.strip()
+            if key in _WHY_FIELDS:
+                info[key] = value.strip()
+    if "Name" not in info:
+        sys.exit(f"fang: couldn't make sense of pacman's answer for {package}.")
+    width = max(len(field) for field in _WHY_FIELDS)
+    for field in _WHY_FIELDS:
+        print(f"{GREEN}{BOLD}{field:<{width}}{RESET} : "
+              f"{info.get(field, 'None')}")
+    return 0
+
+
+def _ensure_root_orphans(raw_argv):
+    """Re-run `fang orphans` under sudo, carrying the confirmation flag.
+
+    sudo wipes most environment variables, so the "user already said yes"
+    marker travels as a hidden argv flag instead.
+    """
+    if os.geteuid() != 0:
+        sudo = shutil.which("sudo")
+        if not sudo:
+            sys.exit("fang: removing orphans needs root, "
+                     "and sudo isn't available.")
+        os.execvp(sudo, [sudo, sys.executable or "python3",
+                         os.path.abspath(__file__)]
+                  + raw_argv + [_ORPHANS_CONFIRMED])
+
+
+def _cmd_orphans(raw_argv, extra, confirmed):
+    """List orphaned packages; offer to remove them."""
+    orphans = _get_orphans()
+    if not orphans:
+        print(f"{GREEN}{BOLD}No orphans hanging around. Squeaky clean!{RESET}")
+        return 0
+    print("Orphaned packages (installed as dependencies, "
+          "nothing needs them anymore):")
+    for pkg in orphans:
+        print(f"  {pkg}")
+    if not confirmed:
+        if not _prompt_yes_no(f"{GREEN}Remove them? [y/N]{RESET} "):
+            print("Left them alone. They can stay.")
+            return 0
+        _ensure_root_orphans(raw_argv)
+    run_pacman(["-Rs", "--noconfirm"] + extra + orphans,
+               success_msg="Orphans evicted. The family is whole again.")
+    return 0  # unreachable: run_pacman exits
+
+
+def _cmd_clean():
+    """Clear the pacman package cache and report the freed space."""
+    cache_dir = "/var/cache/pacman/pkg"
+    before = _dir_size(cache_dir)
+    returncode = _run_pacman(["-Sc", "--noconfirm"])
+    if returncode != 0:
+        sys.exit(returncode)
+    freed = max(0, before - _dir_size(cache_dir))
+    if freed:
+        print(f"{GREEN}{BOLD}Cache cleared. "
+              f"Freed {_human_size(freed)} - room to breathe!{RESET}")
+    else:
+        print(f"{GREEN}{BOLD}Cache was already empty. "
+              f"Nothing to sweep!{RESET}")
+    return 0
 
 
 def build_parser():
@@ -190,12 +329,25 @@ def build_parser():
     sp.add_argument("pattern", nargs="?", metavar="pattern",
                     help="optional filter")
 
+    sub.add_parser("clean", help="clear the pacman package cache")
+
+    sub.add_parser("orphans",
+                   help="list orphaned packages (and optionally remove them)")
+
+    sp = sub.add_parser("why", help="show why a package is installed")
+    sp.add_argument("package", nargs="?", metavar="package",
+                    help="installed package to explain")
+
     return p
 
 
 def main(argv=None):
+    raw = list(sys.argv[1:]) if argv is None else list(argv)
+    orphans_confirmed = _ORPHANS_CONFIRMED in raw
+    raw = [arg for arg in raw if arg != _ORPHANS_CONFIRMED]
+
     parser = build_parser()
-    args, extra = parser.parse_known_args(argv)
+    args, extra = parser.parse_known_args(raw)
 
     if not args.command:
         parser.print_help()
@@ -235,6 +387,17 @@ def main(argv=None):
         if args.pattern:
             query.append(args.pattern)
         run_pacman(query)
+
+    elif args.command == "clean":
+        return _cmd_clean()
+
+    elif args.command == "orphans":
+        return _cmd_orphans(raw, extra, orphans_confirmed)
+
+    elif args.command == "why":
+        if not args.package:
+            sys.exit("fang: tell me what to explain - fang why <package>")
+        return _cmd_why(args.package)
 
     return 0
 

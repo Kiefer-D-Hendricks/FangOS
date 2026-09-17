@@ -1,0 +1,387 @@
+#!/usr/bin/env python3
+"""
+fangos-welcome -- first-boot welcome app for FangOS.
+
+Shows a short guided tour on first graphical login:
+  1. What FangOS is
+  2. How to use the `fang` package tool
+  3. Where to find the website, source code, and community
+
+The "Don't show this again" checkbox shadows the system autostart entry
+with ~/.config/autostart/fangos-welcome.desktop containing Hidden=true,
+which is the XDG-compliant per-user way to opt out of autostart.
+"""
+
+import os
+import sys
+
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QPlainTextEdit,
+    QPushButton,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+# -- Branding ---------------------------------------------------------------
+GREEN = "#2E7D5B"        # Kiefer Green
+GREEN_BRIGHT = "#48C88C"  # glowing terminal green, for hover/highlights
+BG = "#0B0E0C"           # near-black green-tinted background
+SURFACE = "#161B18"      # raised surfaces (buttons, cards)
+CODE_BG = "#060807"      # code block background
+TEXT = "#E8EDE9"         # primary text
+MUTED = "#9AA5A0"        # secondary text
+
+AUTOSTART_NAME = "fangos-welcome.desktop"
+
+STYLESHEET = f"""
+QWidget {{
+    background-color: {BG};
+    color: {TEXT};
+    font-size: 14px;
+}}
+QLabel#teeth {{
+    color: {GREEN};
+    font-size: 46px;
+}}
+QLabel#title {{
+    font-size: 30px;
+    font-weight: bold;
+    color: {TEXT};
+}}
+QLabel#subtitle {{
+    font-size: 15px;
+    color: {MUTED};
+}}
+QLabel#body {{
+    font-size: 14px;
+    color: {TEXT};
+}}
+QLabel#url {{
+    font-size: 12px;
+    color: {MUTED};
+}}
+QPushButton {{
+    background-color: {SURFACE};
+    border: 1px solid {GREEN};
+    border-radius: 6px;
+    padding: 9px 20px;
+    color: {TEXT};
+}}
+QPushButton:hover {{
+    border: 1px solid {GREEN_BRIGHT};
+    background-color: #1B231F;
+}}
+QPushButton:pressed {{
+    background-color: #0E120F;
+}}
+QPushButton:disabled {{
+    color: #5A655F;
+    border: 1px solid #233028;
+    background-color: #101412;
+}}
+QPushButton#accent {{
+    background-color: {GREEN};
+    border: 1px solid {GREEN};
+    color: #FFFFFF;
+    font-weight: bold;
+}}
+QPushButton#accent:hover {{
+    background-color: #35936A;
+    border: 1px solid {GREEN_BRIGHT};
+}}
+QPushButton#accent:disabled {{
+    background-color: #1A2B23;
+    border: 1px solid #233028;
+    color: #5A655F;
+}}
+QPushButton#link {{
+    text-align: left;
+    padding: 12px 18px;
+    font-size: 15px;
+    font-weight: bold;
+}}
+QPlainTextEdit#code {{
+    background-color: {CODE_BG};
+    border: 1px solid #1E2A24;
+    border-radius: 6px;
+    color: #C9D4CE;
+    font-family: monospace;
+    font-size: 13px;
+}}
+QCheckBox {{
+    color: {MUTED};
+    spacing: 8px;
+}}
+QCheckBox::indicator {{
+    width: 16px;
+    height: 16px;
+    border: 1px solid {GREEN};
+    border-radius: 4px;
+    background-color: {SURFACE};
+}}
+QCheckBox::indicator:checked {{
+    background-color: {GREEN};
+}}
+"""
+
+
+# -- Autostart handling -----------------------------------------------------
+def _user_autostart_path():
+    return os.path.join(os.path.expanduser("~/.config/autostart"), AUTOSTART_NAME)
+
+
+def autostart_disabled():
+    """True if the user opted out via a Hidden=true shadow entry."""
+    path = _user_autostart_path()
+    if not os.path.exists(path):
+        return False
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return any(line.strip() == "Hidden=true" for line in f)
+    except OSError:
+        return False
+
+
+def set_autostart_disabled(disabled):
+    """Opt out of (or back into) the autostart entry, per-user."""
+    path = _user_autostart_path()
+    if disabled:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("[Desktop Entry]\n")
+            f.write("Type=Application\n")
+            f.write("Name=FangOS Welcome\n")
+            f.write("Hidden=true\n")
+    else:
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+
+
+# -- Pages ------------------------------------------------------------------
+def _teeth_label():
+    label = QLabel("\u25BC \u25BC \u25BC")  # three fang teeth
+    label.setObjectName("teeth")
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    return label
+
+
+def _title_label(text):
+    label = QLabel(text)
+    label.setObjectName("title")
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    return label
+
+
+def _subtitle_label(text):
+    label = QLabel(text)
+    label.setObjectName("subtitle")
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label.setWordWrap(True)
+    return label
+
+
+def _body_label(text):
+    label = QLabel(text)
+    label.setObjectName("body")
+    label.setWordWrap(True)
+    return label
+
+
+def page_welcome():
+    page = QWidget()
+    layout = QVBoxLayout(page)
+    layout.setContentsMargins(48, 36, 48, 24)
+    layout.setSpacing(14)
+
+    layout.addWidget(_teeth_label())
+    layout.addWidget(_title_label("Welcome to FangOS"))
+    layout.addWidget(_subtitle_label(
+        "An Arch-based distro with a polished KDE Plasma desktop \u2014 "
+        "built for speed, style, and a little bite."
+    ))
+    layout.addSpacing(10)
+
+    for line in (
+        "\u25BC  Arch Linux under the hood \u2014 rolling, fast, up to date",
+        "\u25BC  KDE Plasma desktop, tuned and themed out of the box",
+        "\u25BC  fang \u2014 a friendly package tool with teeth",
+    ):
+        bullet = _body_label(line)
+        layout.addWidget(bullet)
+
+    layout.addStretch(1)
+    layout.addWidget(_subtitle_label(
+        "Take the quick tour \u2014 it only takes a minute."
+    ))
+    return page
+
+
+FANG_EXAMPLES = """\
+fang install firefox     # install packages
+fang update              # update the whole system
+fang search vlc          # search the repos
+fang remove kate         # remove packages
+"""
+
+
+def page_fang():
+    page = QWidget()
+    layout = QVBoxLayout(page)
+    layout.setContentsMargins(48, 36, 48, 24)
+    layout.setSpacing(14)
+
+    layout.addWidget(_title_label("Meet fang"))
+    layout.addWidget(_body_label(
+        "fang is FangOS's friendly frontend for pacman \u2014 familiar "
+        "commands, FangOS-flavored output, zero memorization required."
+    ))
+
+    code = QPlainTextEdit()
+    code.setObjectName("code")
+    code.setPlainText(FANG_EXAMPLES)
+    code.setReadOnly(True)
+    code.setMaximumHeight(130)
+    # No blinking cursor in a read-only showcase block.
+    code.setCursorWidth(0)
+    code.setTextInteractionFlags(
+        Qt.TextInteractionFlag.TextSelectableByMouse
+        | Qt.TextInteractionFlag.TextSelectableByKeyboard
+    )
+    layout.addWidget(code)
+
+    layout.addWidget(_body_label(
+        "It handles sudo for you, streams live progress, and keeps things "
+        "tidy. Keep an eye out for the teeth \u25BC\u25BC\u25BC \u2014 "
+        "that's fang chewing through your downloads."
+    ))
+    layout.addStretch(1)
+    return page
+
+
+LINKS = (
+    ("FangOS Website", "https://os.fangnet.me",
+     "News, downloads, and docs"),
+    ("Source Code on GitHub", "https://github.com/Kiefer-D-Hendricks/FangOS",
+     "Poke around, file issues, contribute"),
+    ("FangNet Community", "https://fangnet.me",
+     "The pack hangs out here \u2014 come say hi"),
+)
+
+
+def page_connected():
+    page = QWidget()
+    layout = QVBoxLayout(page)
+    layout.setContentsMargins(48, 36, 48, 24)
+    layout.setSpacing(8)
+
+    layout.addWidget(_title_label("Get connected"))
+    layout.addWidget(_subtitle_label(
+        "FangOS is a one-wolf project with a whole pack behind it."
+    ))
+    layout.addSpacing(12)
+
+    for name, url, blurb in LINKS:
+        button = QPushButton(name)
+        button.setObjectName("link")
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.clicked.connect(
+            lambda _checked=False, u=url: QDesktopServices.openUrl(QUrl(u))
+        )
+        layout.addWidget(button)
+
+        url_label = QLabel(f"{blurb} \u2014 {url}")
+        url_label.setObjectName("url")
+        url_label.setWordWrap(True)
+        url_label.setContentsMargins(6, 0, 0, 6)
+        layout.addWidget(url_label)
+
+    layout.addStretch(1)
+    return page
+
+
+# -- Main window ------------------------------------------------------------
+class WelcomeWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Welcome to FangOS")
+        self.setFixedSize(680, 520)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        self.stack = QStackedWidget()
+        self.stack.addWidget(page_welcome())
+        self.stack.addWidget(page_fang())
+        self.stack.addWidget(page_connected())
+        root.addWidget(self.stack, 1)
+
+        # Navigation bar
+        nav = QWidget()
+        nav_layout = QHBoxLayout(nav)
+        nav_layout.setContentsMargins(24, 12, 24, 18)
+        nav_layout.setSpacing(10)
+
+        self.dont_show = QCheckBox("Don't show this again")
+        self.dont_show.setChecked(autostart_disabled())
+        self.dont_show.toggled.connect(set_autostart_disabled)
+        nav_layout.addWidget(self.dont_show)
+        nav_layout.addStretch(1)
+
+        self.back_btn = QPushButton("Back")
+        self.back_btn.clicked.connect(self.go_back)
+        nav_layout.addWidget(self.back_btn)
+
+        self.next_btn = QPushButton("Next")
+        self.next_btn.setObjectName("accent")
+        self.next_btn.clicked.connect(self.go_next)
+        nav_layout.addWidget(self.next_btn)
+
+        self.close_btn = QPushButton("Close")
+        self.close_btn.clicked.connect(self.close)
+        nav_layout.addWidget(self.close_btn)
+
+        root.addWidget(nav)
+        self._update_nav()
+
+    def _update_nav(self):
+        index = self.stack.currentIndex()
+        last = self.stack.count() - 1
+        self.back_btn.setEnabled(index > 0)
+        self.next_btn.setText("Finish" if index == last else "Next")
+
+    def go_back(self):
+        index = self.stack.currentIndex()
+        if index > 0:
+            self.stack.setCurrentIndex(index - 1)
+            self._update_nav()
+
+    def go_next(self):
+        index = self.stack.currentIndex()
+        if index >= self.stack.count() - 1:
+            self.close()
+        else:
+            self.stack.setCurrentIndex(index + 1)
+            self._update_nav()
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("FangOS Welcome")
+    app.setStyleSheet(STYLESHEET)
+    window = WelcomeWindow()
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
