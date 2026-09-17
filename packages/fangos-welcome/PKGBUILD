@@ -5,7 +5,7 @@ pkgrel=1
 pkgdesc="First-boot welcome app for FangOS"
 arch=('any')
 url="https://github.com/Kiefer-D-Hendricks/FangOS"
-license=('MIT')
+license=('GPL-3.0-or-later')
 depends=('python' 'python-pyqt6')
 source=('fangos-welcome'
         'fangos-welcome.desktop')
