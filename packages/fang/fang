@@ -17,7 +17,7 @@ import struct
 import sys
 import termios
 
-VERSION = "0.2.3"
+VERSION = "0.2.4"
 
 # Terminal accents (Kiefer Green-ish)
 GREEN = "\033[32m"
@@ -67,10 +67,15 @@ def _stream_with_teeth(fd):
     is flushed as it arrives (without duplicating it) so interactive
     prompts like pacman's "Proceed with installation? [Y/n]" stay visible
     instead of looking hung.
+
+    Carriage-return progress updates share one visual line: when a chunk
+    boundary splits an update, only the not-yet-shown tail is written,
+    so updates never print twice.
     """
     out = sys.stdout
-    buf = ""
-    shown = 0  # how much of the trailing segment is already displayed
+    buf = ""      # trailing incomplete segment (no line terminator yet)
+    shown = 0     # how many chars of buf are already on screen
+    fresh = True  # cursor is at the start of a visually empty line
     while True:
         try:
             chunk = os.read(fd, 1024)
@@ -81,25 +86,34 @@ def _stream_with_teeth(fd):
         buf += chunk.decode("utf-8", errors="replace")
         parts = re.split(r"(\r\n|\r|\n)", buf)
         buf = parts.pop()  # incomplete trailing segment
-        if len(parts) > 1:
-            for i in range(0, len(parts) - 1, 2):
-                sep = parts[i + 1]
-                if sep == "\r\n":
-                    sep = "\n"  # pty ONLCR translation; keep our output clean
-                out.write(teethify(parts[i]) + sep)
-            shown = 0  # trailing segment is brand new now
+        segs = parts[0::2]
+        seps = parts[1::2]
+        for i, (seg, sep) in enumerate(zip(segs, seps)):
+            if i == 0 and not fresh:
+                # Continues the current visual line: a chunk boundary may
+                # have split this segment, so show only the new tail.
+                out.write(teethify(seg)[shown:])
+            else:
+                out.write(teethify(seg))
+            shown = 0
+            if sep == "\r":
+                out.write("\r")  # same visual line continues
+                fresh = False
+            else:
+                # \n and \r\n both start a new visual line
+                out.write("\n")
+                fresh = True
         if len(buf) > shown:
             # teethify() preserves string length, so `shown` stays valid
             out.write(teethify(buf)[shown:])
             shown = len(buf)
+            fresh = False
         out.flush()
     if len(buf) > shown:
         out.write(teethify(buf)[shown:])
     if buf and not buf.endswith("\n"):
         out.write("\n")  # finish a mid-bar line before our own output
     out.flush()
-
-
 def run_pacman(pacman_args, success_msg=None):
     """Run pacman under a pty so it believes it's on a real terminal.
 

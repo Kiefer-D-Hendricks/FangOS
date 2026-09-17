@@ -29,3 +29,4 @@ packages/*/*.pkg.tar.zst
 /var
 packages/calamares/*.tar.gz
 build-*.log
+work-fang*/
