@@ -7,13 +7,17 @@ pacman doing the heavy lifting underneath.
 """
 
 import argparse
+import fcntl
 import os
+import pty
 import re
 import shutil
-import subprocess
+import signal
+import struct
 import sys
+import termios
 
-VERSION = "0.2.2"
+VERSION = "0.2.3"
 
 # Terminal accents (Kiefer Green-ish)
 GREEN = "\033[32m"
@@ -43,7 +47,8 @@ def find_pacman():
 # Fang teeth progress bar: pacman's [#---] bars become [▼▼▼···]
 TOOTH = "▼"
 GAP = "·"
-_BAR_RE = re.compile(r"\[([#-]+)\](?=\s*\d+%)")
+_ANSI = r"\x1b\[[0-9;]*m"
+_BAR_RE = re.compile(r"\[([#-]+)\](?=(?:[ \t]|" + _ANSI + r")*\d+%)")
 
 
 def teethify(line):
@@ -55,18 +60,22 @@ def teethify(line):
     return _BAR_RE.sub(_sub, line)
 
 
-def _stream_with_teeth(pipe):
+def _stream_with_teeth(fd):
     """Pass pacman's output through, rewriting progress bars as teeth.
 
-    The incomplete trailing segment is flushed as it arrives (without
-    duplicating it) so interactive prompts like pacman's
-    "Proceed with installation? [Y/n]" stay visible instead of looking hung.
+    Reads raw bytes from the pty master. The incomplete trailing segment
+    is flushed as it arrives (without duplicating it) so interactive
+    prompts like pacman's "Proceed with installation? [Y/n]" stay visible
+    instead of looking hung.
     """
     out = sys.stdout
     buf = ""
     shown = 0  # how much of the trailing segment is already displayed
     while True:
-        chunk = pipe.read(1024)
+        try:
+            chunk = os.read(fd, 1024)
+        except OSError:
+            break  # child exited; the pty master reports EIO
         if not chunk:
             break
         buf += chunk.decode("utf-8", errors="replace")
@@ -74,27 +83,63 @@ def _stream_with_teeth(pipe):
         buf = parts.pop()  # incomplete trailing segment
         if len(parts) > 1:
             for i in range(0, len(parts) - 1, 2):
-                out.write(teethify(parts[i]) + parts[i + 1])
+                sep = parts[i + 1]
+                if sep == "\r\n":
+                    sep = "\n"  # pty ONLCR translation; keep our output clean
+                out.write(teethify(parts[i]) + sep)
             shown = 0  # trailing segment is brand new now
         if len(buf) > shown:
-            out.write(teethify(buf[shown:]))
+            # teethify() preserves string length, so `shown` stays valid
+            out.write(teethify(buf)[shown:])
             shown = len(buf)
         out.flush()
     if len(buf) > shown:
-        out.write(teethify(buf[shown:]))
-        out.flush()
+        out.write(teethify(buf)[shown:])
+    if buf and not buf.endswith("\n"):
+        out.write("\n")  # finish a mid-bar line before our own output
+    out.flush()
 
 
 def run_pacman(pacman_args, success_msg=None):
-    proc = subprocess.Popen([find_pacman()] + pacman_args,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    """Run pacman under a pty so it believes it's on a real terminal.
+
+    That keeps pacman's progress bars enabled and defeats stdio block
+    buffering, so fang streams live output with teeth instead of sitting
+    silent until pacman exits.
+    """
+    pacman = find_pacman()
     try:
-        _stream_with_teeth(proc.stdout)
+        cols, rows = shutil.get_terminal_size()
+    except OSError:
+        cols, rows = 80, 24
+    if cols <= 0 or rows <= 0:
+        cols, rows = 80, 24
+    pid, fd = pty.fork()
+    if pid == 0:
+        # Child: the pty slave is now stdin/stdout/stderr.
+        try:
+            fcntl.ioctl(1, termios.TIOCSWINSZ,
+                        struct.pack("HHHH", rows, cols, 0, 0))
+            os.execvp(pacman, [pacman] + pacman_args)
+        finally:
+            os._exit(127)
+    interrupted = False
+    try:
+        _stream_with_teeth(fd)
     except KeyboardInterrupt:
-        proc.terminate()
-        proc.wait()
+        interrupted = True
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    _, status = os.waitpid(pid, 0)
+    try:
+        os.close(fd)
+    except OSError:
+        pass
+    if interrupted:
         sys.exit(130)
-    returncode = proc.wait()
+    returncode = os.waitstatus_to_exitcode(status)
     if returncode == 0 and success_msg:
         print(f"{GREEN}{BOLD}{success_msg}{RESET}")
     sys.exit(returncode)

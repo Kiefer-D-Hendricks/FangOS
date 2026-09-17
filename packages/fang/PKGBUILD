@@ -1,5 +1,5 @@
 pkgname=fang
-pkgver=0.2.2
+pkgver=0.2.3
 pkgrel=1
 pkgdesc="Friendly pacman frontend for FangOS"
 arch=("any")
