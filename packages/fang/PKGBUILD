@@ -1,17 +1,23 @@
 pkgname=fang
-pkgver=0.3.0
+pkgver=0.4.0
 pkgrel=1
 pkgdesc="Friendly pacman frontend for FangOS"
 arch=("any")
 url="https://os.fangnet.me"
 license=("GPL-3.0-or-later")
 depends=("python" "pacman")
+optdepends=("yay: AUR support for fang --aur"
+            "paru: AUR support for fang --aur")
 
-source=("fang" "fang-completion.bash")
-sha256sums=("SKIP" "SKIP")
+source=("fang" "fang-completion.bash" "_fang" "fang.fish")
+sha256sums=("SKIP" "SKIP" "SKIP" "SKIP")
 
 package() {
     install -Dm755 "$srcdir/fang" "$pkgdir/usr/bin/fang"
     install -Dm644 "$srcdir/fang-completion.bash" \
         "$pkgdir/usr/share/bash-completion/completions/fang"
+    install -Dm644 "$srcdir/_fang" \
+        "$pkgdir/usr/share/zsh/site-functions/_fang"
+    install -Dm644 "$srcdir/fang.fish" \
+        "$pkgdir/usr/share/fish/vendor_completions.d/fang.fish"
 }

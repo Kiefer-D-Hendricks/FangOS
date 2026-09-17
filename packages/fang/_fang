@@ -1,0 +1,72 @@
+#compdef fang
+# zsh completion for fang, the FangOS package tool.
+#
+# Installed to /usr/share/zsh/site-functions/_fang by the fang package.
+# To try it without installing:
+#   fpath=(/path/to/dir/containing/_fang $fpath)
+#   autoload -Uz _fang
+
+_fang() {
+    local context state line
+    typeset -A opt_args
+
+    local -a commands
+    commands=(
+        'install:Install packages'
+        'remove:Remove packages'
+        'update:Update the whole system'
+        'search:Search for packages'
+        'info:Show package details'
+        'list:List installed packages'
+        'clean:Clear the pacman package cache'
+        'orphans:List orphaned packages'
+        'why:Show why a package is installed'
+    )
+
+    _arguments \
+        '(-h --help)'{-h,--help}'[Show help and exit]' \
+        '--version[Show version and exit]' \
+        '1:command:->command' \
+        '*::arg:->args'
+
+    case $state in
+        command)
+            _describe 'command' commands
+            ;;
+        args)
+            # With --aur, package names come from the AUR - querying it on
+            # every tab press is slow, so stay out of the way (mirrors the
+            # bash completion).
+            if (( ${line[(I)--aur]} )); then
+                return
+            fi
+            case $line[1] in
+                install|search|info)
+                    # The --aur flag for the subcommands that take it.
+                    if [[ $PREFIX == -* ]]; then
+                        _values 'option' \
+                            '--aur[Use the AUR via yay/paru instead of the repos]'
+                        return
+                    fi
+                    ;;
+            esac
+            case $line[1] in
+                install|search)
+                    # Packages available in the sync repos, filtered by
+                    # what has been typed so far (mirrors the bash completion).
+                    local -a pkgs
+                    pkgs=(${(f)"$(pacman -Ssq "$PREFIX" 2>/dev/null)"})
+                    (( $#pkgs )) && _describe 'package' pkgs
+                    ;;
+                remove|info|why|list)
+                    # Installed packages.
+                    local -a pkgs
+                    pkgs=(${(f)"$(pacman -Qq 2>/dev/null)"})
+                    (( $#pkgs )) && _describe 'package' pkgs
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_fang "$@"

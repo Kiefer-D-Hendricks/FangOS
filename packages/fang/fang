@@ -3,7 +3,8 @@
 fang - the FangOS package tool.
 
 A friendly frontend for pacman. FangOS-flavored syntax and output,
-pacman doing the heavy lifting underneath.
+pacman doing the heavy lifting underneath. With --aur, yay/paru
+handle the Arch User Repository the same friendly way.
 """
 
 import argparse
@@ -18,7 +19,7 @@ import subprocess
 import sys
 import termios
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 # Terminal accents (Kiefer Green-ish)
 GREEN = "\033[32m"
@@ -49,6 +50,26 @@ def find_pacman():
     return pacman
 
 
+def find_aur_helper():
+    """Path to an AUR helper (paru preferred over yay), or None."""
+    for name in ("paru", "yay"):
+        helper = shutil.which(name)
+        if helper:
+            return helper
+    return None
+
+
+_AUR_MISSING_MSG = """\
+fang: --aur needs an AUR helper (yay or paru), and I couldn't find one.
+
+To install yay:
+  sudo pacman -S --needed git base-devel
+  git clone https://aur.archlinux.org/yay.git
+  cd yay && makepkg -si
+
+Then `fang install --aur <package>` will work its magic."""
+
+
 # Fang teeth progress bar: pacman's [#---] bars become [▼▼▼···]
 TOOTH = "▼"
 GAP = "·"
@@ -66,7 +87,7 @@ def teethify(line):
 
 
 def _stream_with_teeth(fd):
-    """Pass pacman's output through, rewriting progress bars as teeth.
+    """Pass a package tool's output through, rewriting progress bars as teeth.
 
     Reads raw bytes from the pty master. The incomplete trailing segment
     is flushed as it arrives (without duplicating it) so interactive
@@ -121,16 +142,15 @@ def _stream_with_teeth(fd):
     out.flush()
 
 
-def _run_pacman(pacman_args, success_msg=None):
-    """Run pacman under a pty so it believes it's on a real terminal.
+def _run_with_teeth(binary, tool_args, success_msg=None):
+    """Run a package tool under a pty so it believes it's on a real terminal.
 
-    That keeps pacman's progress bars enabled and defeats stdio block
-    buffering, so fang streams live output with teeth instead of sitting
-    silent until pacman exits.
+    That keeps progress bars enabled and defeats stdio block buffering,
+    so fang streams live output with teeth instead of sitting silent
+    until the tool exits.
 
-    Returns pacman's exit code (unlike run_pacman, does not exit).
+    Returns the tool's exit code (unlike run_pacman, does not exit).
     """
-    pacman = find_pacman()
     try:
         cols, rows = shutil.get_terminal_size()
     except OSError:
@@ -143,7 +163,7 @@ def _run_pacman(pacman_args, success_msg=None):
         try:
             fcntl.ioctl(1, termios.TIOCSWINSZ,
                         struct.pack("HHHH", rows, cols, 0, 0))
-            os.execvp(pacman, [pacman] + pacman_args)
+            os.execvp(binary, [binary] + tool_args)
         finally:
             os._exit(127)
     interrupted = False
@@ -168,9 +188,31 @@ def _run_pacman(pacman_args, success_msg=None):
     return returncode
 
 
+def _run_pacman(pacman_args, success_msg=None):
+    """Run pacman under a pty. Returns pacman's exit code (does not exit)."""
+    return _run_with_teeth(find_pacman(), pacman_args,
+                           success_msg=success_msg)
+
+
 def run_pacman(pacman_args, success_msg=None):
     """Run pacman with teeth, then exit with its exit code."""
     sys.exit(_run_pacman(pacman_args, success_msg=success_msg))
+
+
+def _run_helper(helper_args, success_msg=None):
+    """Run the AUR helper under a pty. Returns its exit code (does not exit).
+
+    Exits with a friendly how-to-install message when no helper is found.
+    """
+    helper = find_aur_helper()
+    if not helper:
+        sys.exit(_AUR_MISSING_MSG)
+    return _run_with_teeth(helper, helper_args, success_msg=success_msg)
+
+
+def run_helper(helper_args, success_msg=None):
+    """Run the AUR helper with teeth, then exit with its exit code."""
+    sys.exit(_run_helper(helper_args, success_msg=success_msg))
 
 
 def _dir_size(path):
@@ -298,6 +340,12 @@ def _cmd_clean():
     return 0
 
 
+def _aur_flag(sp):
+    """Add the --aur flag to an install/search/info subparser."""
+    sp.add_argument("--aur", action="store_true",
+                    help="use the AUR via yay/paru instead of the repos")
+
+
 def build_parser():
     p = argparse.ArgumentParser(
         prog="fang",
@@ -310,6 +358,7 @@ def build_parser():
     sp = sub.add_parser("install", help="install packages")
     sp.add_argument("packages", nargs="*", metavar="package",
                     help="packages to install")
+    _aur_flag(sp)
 
     sp = sub.add_parser("remove", help="remove packages")
     sp.add_argument("packages", nargs="*", metavar="package",
@@ -320,10 +369,12 @@ def build_parser():
     sp = sub.add_parser("search", help="search for packages")
     sp.add_argument("term", nargs="?", metavar="term",
                     help="search term")
+    _aur_flag(sp)
 
     sp = sub.add_parser("info", help="show package details")
     sp.add_argument("package", nargs="?", metavar="package",
                     help="package to inspect")
+    _aur_flag(sp)
 
     sp = sub.add_parser("list", help="list installed packages")
     sp.add_argument("pattern", nargs="?", metavar="pattern",
@@ -353,12 +404,27 @@ def main(argv=None):
         parser.print_help()
         return 2
 
-    if args.command in COMMANDS_NEEDING_ROOT:
+    wants_aur = getattr(args, "aur", False)
+
+    if wants_aur and args.command == "install" and os.geteuid() == 0:
+        sys.exit("fang: AUR helpers refuse to run as root - run this as "
+                 "yourself (no sudo), they'll ask for it when they need it.")
+
+    needs_root = args.command in COMMANDS_NEEDING_ROOT
+    if wants_aur and args.command == "install":
+        # yay/paru must not run as root; they escalate with sudo on their own.
+        needs_root = False
+    if needs_root:
         ensure_root(sys.argv[1:] if argv is None else argv)
 
     if args.command == "install":
         if not args.packages:
             sys.exit("fang: tell me what to install - fang install <package> ...")
+        if wants_aur:
+            # No --noconfirm here on purpose: AUR builds deserve eyes on
+            # the PKGBUILD diff prompts. The pty keeps them visible.
+            run_helper(["-S"] + extra + args.packages,
+                       success_msg="Installed from the AUR. Enjoy!")
         run_pacman(["-S", "--noconfirm"] + extra + args.packages,
                    success_msg="Installed. Enjoy!")
 
@@ -375,11 +441,15 @@ def main(argv=None):
     elif args.command == "search":
         if not args.term:
             sys.exit("fang: tell me what to search for - fang search <term>")
+        if wants_aur:
+            run_helper(["-Ss"] + extra + [args.term])
         run_pacman(["-Ss"] + extra + [args.term])
 
     elif args.command == "info":
         if not args.package:
             sys.exit("fang: tell me what to look up - fang info <package>")
+        if wants_aur:
+            run_helper(["-Si", args.package] + extra)
         run_pacman(["-Si", args.package] + extra)
 
     elif args.command == "list":

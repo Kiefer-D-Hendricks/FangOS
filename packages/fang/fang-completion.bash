@@ -5,13 +5,17 @@
 #   source fang-completion.bash
 
 _fang_complete() {
-    local cur cmd
+    local cur cmd w
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
 
-    # Don't complete package names for flags; fang takes none worth
-    # completing here, so just stay out of the way.
+    # Complete the --aur flag for the subcommands that take it.
     if [[ "$cur" == -* ]]; then
+        case "${COMP_WORDS[1]}" in
+            install|search|info)
+                COMPREPLY=( $(compgen -W "--aur" -- "$cur") )
+                ;;
+        esac
         return 0
     fi
 
@@ -20,6 +24,12 @@ _fang_complete() {
         COMPREPLY=( $(compgen -W "install remove update search info list clean orphans why" -- "$cur") )
         return 0
     fi
+
+    # With --aur, package names come from the AUR - querying it on every
+    # tab press is slow, so stay out of the way.
+    for w in "${COMP_WORDS[@]}"; do
+        [[ "$w" == "--aur" ]] && return 0
+    done
 
     # Later words: package names, depending on the subcommand.
     cmd="${COMP_WORDS[1]}"
