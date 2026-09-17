@@ -293,6 +293,7 @@
   <div class="wrap">
     <nav class="utility" aria-label="Page navigation">
       <a href="#why">Why FangOS</a>
+      <a href="#fang">Meet fang</a>
       <a href="#install">Installation</a>
       <a href="#requirements">Requirements</a>
       <a href="https://github.com/Kiefer-D-Hendricks/FangOS.git">GitHub ↗</a>
@@ -347,10 +348,24 @@
     </div>
   </section>
 
+  <section id="fang">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-index">02 / THE TOOL</span>
+        <div>
+          <h2>Arch Linux, with teeth.</h2>
+          <p class="section-copy">FangOS ships with <strong>fang</strong>, a friendly frontend for pacman. Same Arch power underneath, more personality on top &mdash; including progress bars with actual teeth. It handles privilege escalation itself, so <span class="code" style="font:13px var(--mono);color:var(--green)">fang install</span> just works.</p>
+        </div>
+      </div>
+      <div class="code-block"><code>$ fang install firefox<br>$ fang search video editor<br>$ fang update<br>$ fang clean<br>$ fang why plasma-desktop<br>$ fang orphans</code><button class="copy-btn" data-copy="fang install firefox">Copy</button></div>
+      <p class="section-copy" style="margin-top:22px">Nine commands cover the daily driver workflow: <span style="font:13px var(--mono);color:var(--green)">install</span>, <span style="font:13px var(--mono);color:var(--green)">remove</span>, <span style="font:13px var(--mono);color:var(--green)">update</span>, <span style="font:13px var(--mono);color:var(--green)">search</span>, <span style="font:13px var(--mono);color:var(--green)">info</span>, <span style="font:13px var(--mono);color:var(--green)">list</span>, <span style="font:13px var(--mono);color:var(--green)">clean</span>, <span style="font:13px var(--mono);color:var(--green)">orphans</span>, and <span style="font:13px var(--mono);color:var(--green)">why</span> &mdash; plus tab-completion for bash, zsh, and fish.</p>
+    </div>
+  </section>
+
   <section class="install" id="install">
     <div class="wrap">
       <div class="section-head">
-        <span class="section-index">02 / INSTALL</span>
+        <span class="section-index">03 / INSTALL</span>
         <div><h2>From ISO to desktop.</h2><p class="section-copy">Three stages, one USB drive. Back up anything important before changing disk partitions.</p></div>
       </div>
       <div class="install-grid">
@@ -389,6 +404,7 @@
               <li>Choose the standard FangOS live entry—no extra kernel options needed.</li>
               <li>Open the installer and follow the disk, user, and locale steps.</li>
               <li>When installation finishes, shut down, remove the USB, and boot from the internal drive.</li>
+              <li>On first login, the FangOS welcome app walks you through the system and introduces fang.</li>
             </ul>
           </article>
         </div>
@@ -399,7 +415,7 @@
   <section id="requirements">
     <div class="wrap">
       <div class="section-head">
-        <span class="section-index">03 / BEFORE YOU BOOT</span>
+        <span class="section-index">04 / BEFORE YOU BOOT</span>
         <div><h2>The short checklist.</h2><p class="section-copy">FangOS targets standard 64-bit PCs. A wired or wireless internet connection is recommended during installation and for updates afterward.</p></div>
       </div>
       <div class="requirements">
