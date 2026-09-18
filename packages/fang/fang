@@ -19,7 +19,7 @@ import subprocess
 import sys
 import termios
 
-VERSION = "0.4.0"
+VERSION = "0.4.1"
 
 # Terminal accents (Kiefer Green-ish)
 GREEN = "\033[32m"
@@ -57,6 +57,23 @@ def find_aur_helper():
         if helper:
             return helper
     return None
+
+
+def _db_needs_sync():
+    import glob, time, os
+    dbs = glob.glob("/var/lib/pacman/sync/*.db")
+    if not dbs:
+        return True
+    newest = max(os.path.getmtime(f) for f in dbs)
+    return (time.time() - newest) > 86400
+
+
+def _ensure_db_synced():
+    if _db_needs_sync():
+        print(GREEN + "Syncing..." + RESET)
+        rc = _run_pacman(["-Sy", "--noconfirm"])
+        if rc != 0:
+            sys.exit("fang: sync failed.")
 
 
 _AUR_MISSING_MSG = """\
@@ -425,6 +442,7 @@ def main(argv=None):
             # the PKGBUILD diff prompts. The pty keeps them visible.
             run_helper(["-S"] + extra + args.packages,
                        success_msg="Installed from the AUR. Enjoy!")
+        _ensure_db_synced()
         run_pacman(["-S", "--noconfirm"] + extra + args.packages,
                    success_msg="Installed. Enjoy!")
 
@@ -443,6 +461,7 @@ def main(argv=None):
             sys.exit("fang: tell me what to search for - fang search <term>")
         if wants_aur:
             run_helper(["-Ss"] + extra + [args.term])
+        _ensure_db_synced()
         run_pacman(["-Ss"] + extra + [args.term])
 
     elif args.command == "info":
@@ -450,6 +469,7 @@ def main(argv=None):
             sys.exit("fang: tell me what to look up - fang info <package>")
         if wants_aur:
             run_helper(["-Si", args.package] + extra)
+        _ensure_db_synced()
         run_pacman(["-Si", args.package] + extra)
 
     elif args.command == "list":
