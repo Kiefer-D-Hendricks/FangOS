@@ -2,10 +2,13 @@
 """
 fangos-welcome -- first-boot welcome app for FangOS.
 
-Shows a short guided tour on first graphical login:
+Shows a guided tour on first graphical login:
   1. What FangOS is
   2. How to use the `fang` package tool
-  3. Where to find the website, source code, and community
+  3. Live system info (CPU, RAM, GPU, kernel, disk)
+  4. First steps with one-click actions (update, essentials, settings)
+  5. Tips & tricks (KDE shortcuts, fang tips, useful commands)
+  6. Where to find the website, source code, and community
 
 The "Don't show this again" checkbox shadows the system autostart entry
 with ~/.config/autostart/fangos-welcome.desktop containing Hidden=true,
@@ -13,6 +16,10 @@ which is the XDG-compliant per-user way to opt out of autostart.
 """
 
 import os
+import platform
+import re
+import shutil
+import subprocess
 import sys
 
 from PyQt6.QtCore import Qt, QUrl
@@ -20,10 +27,12 @@ from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -37,6 +46,7 @@ SURFACE = "#161B18"      # raised surfaces (buttons, cards)
 CODE_BG = "#060807"      # code block background
 TEXT = "#E8EDE9"         # primary text
 MUTED = "#9AA5A0"        # secondary text
+LABEL_GREEN = "#7CC9A2"  # field labels on the system info grid
 
 AUTOSTART_NAME = "fangos-welcome.desktop"
 
@@ -66,6 +76,33 @@ QLabel#body {{
 QLabel#url {{
     font-size: 12px;
     color: {MUTED};
+}}
+QLabel#field {{
+    font-size: 13px;
+    font-weight: bold;
+    color: {LABEL_GREEN};
+}}
+QLabel#value {{
+    font-size: 13px;
+    color: {TEXT};
+}}
+QLabel#tiphead {{
+    font-size: 15px;
+    font-weight: bold;
+    color: {GREEN_BRIGHT};
+}}
+QLabel#tip {{
+    font-size: 13px;
+    color: {TEXT};
+}}
+QLabel#kbd {{
+    font-size: 13px;
+    color: {GREEN_BRIGHT};
+    font-family: monospace;
+    background-color: {SURFACE};
+    border: 1px solid {GREEN};
+    border-radius: 4px;
+    padding: 2px 8px;
 }}
 QPushButton {{
     background-color: {SURFACE};
@@ -107,6 +144,11 @@ QPushButton#link {{
     font-size: 15px;
     font-weight: bold;
 }}
+QPushButton#action {{
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 15px;
+}}
 QPlainTextEdit#code {{
     background-color: {CODE_BG};
     border: 1px solid #1E2A24;
@@ -128,6 +170,9 @@ QCheckBox::indicator {{
 }}
 QCheckBox::indicator:checked {{
     background-color: {GREEN};
+}}
+QScrollArea {{
+    border: none;
 }}
 """
 
@@ -166,7 +211,114 @@ def set_autostart_disabled(disabled):
             pass
 
 
-# -- Pages ------------------------------------------------------------------
+# -- System detection -------------------------------------------------------
+def _cpu_model():
+    try:
+        with open("/proc/cpuinfo", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or "Unknown"
+
+
+def _ram_total():
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("MemTotal"):
+                    kb = int(line.split()[1])
+                    gb = kb / 1024 / 1024
+                    return f"{gb:.1f} GB"
+    except (OSError, ValueError, IndexError):
+        pass
+    return "Unknown"
+
+
+def _gpu_model():
+    # Try lspci first.
+    try:
+        out = subprocess.run(
+            ["lspci"], capture_output=True, text=True, timeout=5
+        ).stdout
+        vga = [l for l in out.splitlines()
+               if "VGA" in l or "3D controller" in l or "Display controller" in l]
+        if vga:
+            # Strip the "00:02.0 VGA compatible controller: " prefix.
+            m = re.search(r"(?:VGA|3D|Display)[^:]*:\s*(.+)", vga[0])
+            return m.group(1).strip() if m else vga[0].strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    # Fall back to /sys DRM devices.
+    try:
+        for card in sorted(os.listdir("/sys/class/drm")):
+            if card.startswith("card") and "-" not in card:
+                vendor = device = ""
+                try:
+                    with open(f"/sys/class/drm/{card}/device/vendor") as f:
+                        vendor = f.read().strip()
+                    with open(f"/sys/class/drm/{card}/device/device") as f:
+                        device = f.read().strip()
+                except OSError:
+                    continue
+                if vendor or device:
+                    return f"PCI {vendor}:{device}"
+    except OSError:
+        pass
+    return "Unknown"
+
+
+def _kernel_version():
+    return platform.release()
+
+
+def _disk_space():
+    try:
+        usage = shutil.disk_usage("/")
+        total = usage.total / 1024**3
+        free = usage.free / 1024**3
+        return f"{free:.1f} GB free of {total:.1f} GB"
+    except OSError:
+        return "Unknown"
+
+
+def _desktop_env():
+    return os.environ.get("XDG_CURRENT_DESKTOP", "Unknown")
+
+
+# -- Action helpers ---------------------------------------------------------
+def _run_in_terminal(command):
+    """Run a shell command in the user's terminal emulator, detached."""
+    from PyQt6.QtCore import QProcess
+
+    wrapped = (
+        f"{command}; echo; echo '--- done ---'; "
+        "echo 'Press Enter to close...'; read"
+    )
+    for term, args in (
+        ("konsole", ["-e", "bash", "-c", wrapped]),
+        ("xdg-terminal-exec", ["bash", "-c", wrapped]),
+        ("gnome-terminal", ["--", "bash", "-c", wrapped]),
+        ("xterm", ["-e", "bash", "-c", wrapped]),
+    ):
+        if shutil.which(term):
+            QProcess.startDetached(term, args)
+            return True
+    return False
+
+
+def _open_settings():
+    from PyQt6.QtCore import QProcess
+
+    for app in ("systemsettings", "systemsettings5"):
+        if shutil.which(app):
+            QProcess.startDetached(app, [])
+            return True
+    return False
+
+
+# -- Page helpers -----------------------------------------------------------
 def _teeth_label():
     label = QLabel("\u25BC \u25BC \u25BC")  # three fang teeth
     label.setObjectName("teeth")
@@ -196,6 +348,17 @@ def _body_label(text):
     return label
 
 
+def _scrollable(inner):
+    """Wrap a page widget in a scroll area so content never clips."""
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setWidget(inner)
+    scroll.setHorizontalScrollBarPolicy(
+        Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    return scroll
+
+
+# -- Pages ------------------------------------------------------------------
 def page_welcome():
     page = QWidget()
     layout = QVBoxLayout(page)
@@ -215,8 +378,7 @@ def page_welcome():
         "\u25BC  KDE Plasma desktop, tuned and themed out of the box",
         "\u25BC  fang \u2014 a friendly package tool with teeth",
     ):
-        bullet = _body_label(line)
-        layout.addWidget(bullet)
+        layout.addWidget(_body_label(line))
 
     layout.addStretch(1)
     layout.addWidget(_subtitle_label(
@@ -267,6 +429,150 @@ def page_fang():
     return page
 
 
+def page_system_info():
+    page = QWidget()
+    layout = QVBoxLayout(page)
+    layout.setContentsMargins(48, 36, 48, 24)
+    layout.setSpacing(14)
+
+    layout.addWidget(_title_label("Your system"))
+    layout.addWidget(_subtitle_label(
+        "Detected live \u2014 this is the machine FangOS is running on."
+    ))
+    layout.addSpacing(6)
+
+    fields = (
+        ("CPU", _cpu_model()),
+        ("Memory", _ram_total()),
+        ("Graphics", _gpu_model()),
+        ("Kernel", _kernel_version()),
+        ("Disk ( / )", _disk_space()),
+        ("Desktop", _desktop_env()),
+    )
+
+    grid = QGridLayout()
+    grid.setSpacing(10)
+    grid.setColumnStretch(0, 0)
+    grid.setColumnStretch(1, 1)
+    for row, (name, value) in enumerate(fields):
+        field_label = QLabel(name)
+        field_label.setObjectName("field")
+        value_label = QLabel(value)
+        value_label.setObjectName("value")
+        value_label.setWordWrap(True)
+        grid.addWidget(field_label, row, 0, Qt.AlignmentFlag.AlignTop)
+        grid.addWidget(value_label, row, 1)
+    layout.addLayout(grid)
+
+    layout.addStretch(1)
+    layout.addWidget(_subtitle_label(
+        "\u25BC Looking good. Let's get you set up. \u25BC"
+    ))
+    return page
+
+
+def _action_button(title, blurb, on_click):
+    button = QPushButton(f"{title}\n{blurb}")
+    button.setObjectName("action")
+    button.setCursor(Qt.CursorShape.PointingHandCursor)
+    button.clicked.connect(on_click)
+    return button
+
+
+def page_first_steps():
+    page = QWidget()
+    layout = QVBoxLayout(page)
+    layout.setContentsMargins(48, 36, 48, 24)
+    layout.setSpacing(12)
+
+    layout.addWidget(_title_label("First steps"))
+    layout.addWidget(_subtitle_label(
+        "Three clicks and you're home. Each one opens a terminal so you "
+        "can watch fang work."
+    ))
+    layout.addSpacing(6)
+
+    layout.addWidget(_action_button(
+        "\u25BC  Update System",
+        "Pull the latest packages with fang update",
+        lambda: _run_in_terminal("fang update"),
+    ))
+    layout.addWidget(_action_button(
+        "\u25BC  Install Essentials",
+        "Firefox, VLC, and friends in one go",
+        lambda: _run_in_terminal(
+            "fang install firefox vlc gimp libreoffice-fresh"),
+    ))
+    layout.addWidget(_action_button(
+        "\u25BC  Open Settings",
+        "Tune Plasma the way you like it",
+        _open_settings,
+    ))
+
+    layout.addStretch(1)
+    layout.addWidget(_subtitle_label(
+        "fang will ask for your password when it needs it \u2014 "
+        "that's normal, that's Linux."
+    ))
+    return page
+
+
+TIPS = (
+    ("KDE shortcuts",
+     (("Meta", "Open the application launcher"),
+      ("Meta + Tab", "Switch between activities"),
+      ("Alt + Tab", "Switch windows"),
+      ("Meta + Arrow keys", "Snap windows to edges"),
+      ("Ctrl + Alt + T", "Open a terminal (Konsole)"),
+      ("Print Screen", "Screenshot with Spectacle"))),
+    ("fang tips",
+     (("fang install --aur <pkg>", "Grab something from the AUR"),
+      ("fang search <term>", "Search repos before you install"),
+      ("fang info <pkg>", "See details before committing"),
+      ("fang update", "One command keeps everything fresh"))),
+    ("Handy commands",
+     (("fastfetch", "Show off your system, fang-style"),
+      ("lsblk -f", "See your disks and filesystems"),
+      ("journalctl -p err -b", "What went wrong this boot?"),
+      ("systemctl --failed", "Which services didn't start?"))),
+)
+
+
+def page_tips():
+    inner = QWidget()
+    layout = QVBoxLayout(inner)
+    layout.setContentsMargins(48, 28, 48, 24)
+    layout.setSpacing(10)
+
+    layout.addWidget(_title_label("Tips & tricks"))
+    layout.addWidget(_subtitle_label(
+        "A few things worth knowing on day one."
+    ))
+    layout.addSpacing(4)
+
+    for section, items in TIPS:
+        head = QLabel(f"\u25BC  {section}")
+        head.setObjectName("tiphead")
+        layout.addWidget(head)
+        for keys, desc in items:
+            row = QHBoxLayout()
+            row.setSpacing(10)
+            kbd = QLabel(keys)
+            kbd.setObjectName("kbd")
+            kbd.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse)
+            tip = QLabel(desc)
+            tip.setObjectName("tip")
+            tip.setWordWrap(True)
+            row.addWidget(kbd)
+            row.addWidget(tip, 1)
+            layout.addLayout(row)
+        layout.addSpacing(8)
+
+    layout.addStretch(1)
+    return _scrollable(inner)
+
+
 LINKS = (
     ("FangOS Website", "https://os.fangnet.me",
      "News, downloads, and docs"),
@@ -313,7 +619,7 @@ class WelcomeWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Welcome to FangOS")
-        self.setFixedSize(680, 520)
+        self.setFixedSize(700, 560)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -322,8 +628,26 @@ class WelcomeWindow(QWidget):
         self.stack = QStackedWidget()
         self.stack.addWidget(page_welcome())
         self.stack.addWidget(page_fang())
+        self.stack.addWidget(page_system_info())
+        self.stack.addWidget(page_first_steps())
+        self.stack.addWidget(page_tips())
         self.stack.addWidget(page_connected())
         root.addWidget(self.stack, 1)
+
+        # Page dots
+        dots = QHBoxLayout()
+        dots.setContentsMargins(0, 8, 0, 0)
+        dots.addStretch(1)
+        self.dot_labels = []
+        for _ in range(self.stack.count()):
+            dot = QLabel("\u25CF")
+            dot.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
+            dots.addWidget(dot)
+            self.dot_labels.append(dot)
+        dots.addStretch(1)
+        dots_widget = QWidget()
+        dots_widget.setLayout(dots)
+        root.addWidget(dots_widget)
 
         # Navigation bar
         nav = QWidget()
@@ -358,6 +682,11 @@ class WelcomeWindow(QWidget):
         last = self.stack.count() - 1
         self.back_btn.setEnabled(index > 0)
         self.next_btn.setText("Finish" if index == last else "Next")
+        for i, dot in enumerate(self.dot_labels):
+            dot.setStyleSheet(
+                f"color: {GREEN_BRIGHT if i == index else MUTED}; "
+                "font-size: 10px;"
+            )
 
     def go_back(self):
         index = self.stack.currentIndex()

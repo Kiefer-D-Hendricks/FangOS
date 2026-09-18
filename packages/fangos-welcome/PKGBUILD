@@ -1,6 +1,6 @@
 # Maintainer: Kiefer D. Hendricks
 pkgname=fangos-welcome
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="First-boot welcome app for FangOS"
 arch=('any')
