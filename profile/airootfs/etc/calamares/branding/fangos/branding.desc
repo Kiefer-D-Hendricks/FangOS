@@ -1,29 +1,27 @@
----
-componentName: fangos
+componentName:         fangos
 
 strings:
-    productName: FangOS
-    shortProductName: FangOS
-    version: Rolling
-    shortVersion: Rolling
-    versionedName: FangOS Rolling
-    shortVersionedName: FangOS
+    productName:         FangOS
+    shortProductName:    FangOS
+    version:             Rolling
+    shortVersion:        Rolling
+    versionedName:       FangOS Rolling
+    shortVersionedName:  FangOS
     bootloaderEntryName: FangOS
-    productUrl: "https://github.com/Kiefer-D-Hendricks/FangOS"
-    supportUrl: "https://github.com/Kiefer-D-Hendricks/FangOS/issues"
-    knownIssuesUrl: "https://github.com/Kiefer-D-Hendricks/FangOS/issues"
-    releaseNotesUrl: "https://github.com/Kiefer-D-Hendricks/FangOS/releases"
+    productUrl:          "https://github.com/Kiefer-D-Hendricks/FangOS"
+    supportUrl:          "https://github.com/Kiefer-D-Hendricks/FangOS/issues"
+    knownIssuesUrl:      "https://github.com/Kiefer-D-Hendricks/FangOS/issues"
+    releaseNotesUrl:     "https://github.com/Kiefer-D-Hendricks/FangOS/releases"
 
-slideshow: "show.qml"
+slideshow:             "show.qml"
 images:
-    productLogo: fangos.png
-    productIcon: fangos.png
-    productWelcome: fangos.png
-
+    productLogo:       fangos.png
+    productIcon:       fangos.png
+    productWelcome:    fangos.png
 
 style:
-    sidebarBackground: "#0B1712"
-    sidebarText: "#FFFFFF"
-    sidebarTextSelect: "#FFFFFF"
+    sidebarBackground:   "#0B0E0C"
+    sidebarText:         "#FFFFFF"
+    sidebarTextSelect:   "#2E7D5B"
 
 windowPlacement: center
